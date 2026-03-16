@@ -1,7 +1,7 @@
 // ეს ფაილი სერვერიდან ჩაიტვირთება Extension-ის მიერ
 // განახლებისთვის მხოლოდ სერვერზე შეცვალე — Extension-ის ხელახლა დაყენება არ სჭირდება!
 
-const API_INSTANCE = 'http://localhost:3000/'
+const API_INSTANCE = 'https://my-extension-production-55ba.up.railway.app/'
 // production-ში:
 // const API_INSTANCE = 'https://შენი-სერვერი.railway.app/'
 
