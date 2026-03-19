@@ -2,9 +2,6 @@
 // განახლებისთვის მხოლოდ სერვერზე შეცვალე — Extension-ის ხელახლა დაყენება არ სჭირდება!
 
 const API_INSTANCE = 'https://my-extension-production-55ba.up.railway.app/'
-// production-ში:
-// const API_INSTANCE = 'https://შენი-სერვერი.railway.app/'
-
 const FRONT_URL = API_INSTANCE + 'panel/'
 
 //=========================================================================================> AUTH
@@ -62,6 +59,7 @@ async function check_auth_myhome() {
 
 async function verification_from_ss(loading) {
   const element = document.getElementById('__NEXT_DATA__')
+  if (!element) return // შემოწმება თუ ელემენტი არსებობს
   const obj = JSON.parse(element.textContent)
   const session = obj.props.pageProps.session?.user
   if (!session) { alert('არ ხართ ავტორიზირებული ss.ge-ზე'); return }
@@ -182,7 +180,7 @@ function get_loading_images_HTML() {
 }
 function get_modal_window_HTML() {
   const item = document.createElement("div")
-  item.innerHTML = `<div id="base_modal" class="base-modal"><div id="base_modalContent" class="base-modal-content"></div></div>`
+  item.innerHTML = `<div id="base_modal" class="base-modal" style="display:none;"><div id="base_modalContent" class="base-modal-content"></div></div>`
   return item
 }
 function get_verification_btn_ss_HTML() {
@@ -196,65 +194,59 @@ function get_verification_btn_ss_HTML() {
 
 async function append_UI(config) {
   const body = document.querySelector('body')
-  const inner_container = document.getElementById('inner_container')
-  const buttons_container = document.getElementById('buttons_container')
-  const base_button = document.getElementById('open_base_btn')
-  const verification_btn_ss = document.getElementById('verification_btn_ss')
-  const loading_gif = document.getElementById('loading_gif')
-  const loading_images = document.getElementById('loading_images')
-  const modal = document.getElementById('base_modal')
-  const save_btn_ss = document.getElementById('save_btn_ss')
-  const save_btn_myhome = document.getElementById('save_btn_myhome')
-  const fast_upload_btn_ss = document.getElementById('fast_upload_btn_ss')
-  const fast_upload_btn_myhome = document.getElementById('fast_upload_btn_myhome')
+  if (!body) return
 
-  if (body) {
-    const HTML = get_inner_container_HTML()
-    HTML.appendChild(get_buttons_container_HTML())
-    if (!inner_container) body.insertBefore(HTML, body.firstChild)
-
-    if (inner_container) {
-      if (!modal) inner_container.appendChild(get_modal_window_HTML())
-      if (!loading_gif) inner_container.appendChild(get_loading_gif_HTML())
-      if (!loading_images) inner_container.appendChild(get_loading_images_HTML())
-
-      if (config.ss && !verification_btn_ss) {
-        buttons_container.appendChild(get_verification_btn_ss_HTML())
-        document.getElementById('verification_btn_ss').addEventListener('click', () => verification_from_ss(false))
-      }
-
-      if (!IS_AUTH) { inner_container.style.display = 'block'; return }
-
-      if (!base_button) {
-        buttons_container.appendChild(get_base_btn_HTML())
-        validate_base_modal()
-      }
-      if (config.ss && !save_btn_ss) {
-        const btn = get_save_btn_HTML('save_btn_ss', 'SS.GE-ზე შენახვა', '💾')
-        buttons_container.appendChild(btn)
-        btn.addEventListener('click', find_draft_SS)
-      }
-      if (config.myhome && !save_btn_myhome) {
-        const btn = get_save_btn_HTML('save_btn_myhome', 'Myhome-ზე შენახვა', '💾')
-        buttons_container.appendChild(btn)
-        btn.addEventListener('click', find_draft_myhome)
-      }
-      if (!fast_upload_btn_ss) {
-        const btn = get_save_btn_HTML('fast_upload_btn_ss', 'SS.GE-ზე სწრაფი ატვირთვა', '🏠')
-        btn.style.background = '#4CAF50'
-        buttons_container.appendChild(btn)
-        btn.addEventListener('click', fast_save_upload_to_ss)
-      }
-      if (!fast_upload_btn_myhome) {
-        const btn = get_save_btn_HTML('fast_upload_btn_myhome', 'Myhome-ზე სწრაფი ატვირთვა', '🏡')
-        btn.style.background = '#FF9800'
-        buttons_container.appendChild(btn)
-        btn.addEventListener('click', fast_save_upload_to_myhome)
-      }
-
-      inner_container.style.display = 'block'
-    }
+  let inner_container = document.getElementById('inner_container')
+  if (!inner_container) {
+    inner_container = get_inner_container_HTML()
+    inner_container.appendChild(get_buttons_container_HTML())
+    body.insertBefore(inner_container, body.firstChild)
   }
+
+  const buttons_container = document.getElementById('buttons_container')
+  if (!document.getElementById('base_modal')) inner_container.appendChild(get_modal_window_HTML())
+  if (!document.getElementById('loading_gif')) inner_container.appendChild(get_loading_gif_HTML())
+  if (!document.getElementById('loading_images')) inner_container.appendChild(get_loading_images_HTML())
+
+  if (config.ss && !document.getElementById('verification_btn_ss')) {
+    buttons_container.appendChild(get_verification_btn_ss_HTML())
+    document.getElementById('verification_btn_ss').addEventListener('click', () => verification_from_ss(false))
+  }
+
+  if (!IS_AUTH) { inner_container.style.display = 'block'; return }
+
+  if (!document.getElementById('open_base_btn')) {
+    buttons_container.appendChild(get_base_btn_HTML())
+    validate_base_modal()
+  }
+
+  if (config.ss && !document.getElementById('save_btn_ss')) {
+    const btn = get_save_btn_HTML('save_btn_ss', 'SS.GE-ზე შენახვა', '💾')
+    buttons_container.appendChild(btn)
+    btn.addEventListener('click', find_draft_SS)
+  }
+  
+  if (config.myhome && !document.getElementById('save_btn_myhome')) {
+    const btn = get_save_btn_HTML('save_btn_myhome', 'Myhome-ზე შენახვა', '💾')
+    buttons_container.appendChild(btn)
+    btn.addEventListener('click', find_draft_myhome)
+  }
+
+  if (!document.getElementById('fast_upload_btn_ss')) {
+    const btn = get_save_btn_HTML('fast_upload_btn_ss', 'SS.GE-ზე სწრაფი ატვირთვა', '🏠')
+    btn.style.background = '#4CAF50'
+    buttons_container.appendChild(btn)
+    btn.addEventListener('click', fast_save_upload_to_ss)
+  }
+
+  if (!document.getElementById('fast_upload_btn_myhome')) {
+    const btn = get_save_btn_HTML('fast_upload_btn_myhome', 'Myhome-ზე სწრაფი ატვირთვა', '🏡')
+    btn.style.background = '#FF9800'
+    buttons_container.appendChild(btn)
+    btn.addEventListener('click', fast_save_upload_to_myhome)
+  }
+
+  inner_container.style.display = 'block'
 }
 
 function show_loading_images(done_count, total_count) {
@@ -280,40 +272,57 @@ function validate_base_modal() {
   const modal = document.getElementById('base_modal')
   const open_btn = document.getElementById('open_base_btn')
   let modal_open = false
-  open_btn.addEventListener('click', async () => {
-    modal.style.display = "block"
-    modal_open = true
-    insers_base_modal()
-  })
-  window.onclick = (event) => {
-    if (!modal_open) return
-    if (event.target === modal) { destroy_base_modal(); modal_open = false }
+
+  if (open_btn) {
+    open_btn.addEventListener('click', async () => {
+      modal.style.display = "block"
+      modal_open = true
+      insers_base_modal()
+    })
   }
-  window.addEventListener('message', (event) => {
-    if (event.data?.type === 'CLOSE_BASE_MODAL') {
+
+  window.addEventListener("message", (event) => {
+    if (event.data?.type === "CLOSE_BASE_MODAL") {
       destroy_base_modal()
       modal_open = false
     }
   })
+
+  window.onclick = (event) => {
+    if (!modal_open) return
+    if (event.target === modal) { 
+        destroy_base_modal()
+        modal_open = false 
+    }
+  }
 }
 
 function destroy_base_modal() {
   const modal = document.getElementById('base_modal')
   const iframe = document.getElementById('myestate_frame')
+  const inner = document.getElementById("inner_container")
+  
   if (iframe) iframe.remove()
-  modal.style.display = "none"
+  if (modal) modal.style.display = "none"
+  if (inner) inner.style.display = "block"
 }
 
 function insers_base_modal() {
+  const inner = document.getElementById("inner_container");
+  if (inner) inner.style.display = "none";
+  
   const modal = document.getElementById('base_modal')
   modal.style.display = "block"
+  
   const modalContent = document.getElementById('base_modalContent')
   const token = get_token_from_local_storage()
+  
   if (!token) { alert('ავტორიზაცია საჭიროა!'); return }
+  
   modalContent.innerHTML = `
     <iframe id="myestate_frame" class="frame_custom" scrolling="yes"
       src="${FRONT_URL}?token=${token}"
-      height="700" width="900" style="border-radius:12px;">
+      height="700" width="900" style="border-radius:12px; border:none;">
     </iframe>
   `
 }
@@ -364,7 +373,6 @@ setTimeout(async () => {
   if (url.includes('auto-pay')) AUTO_PAY_SS = true
   const draft_id = Number(match[1])
   if (!draft_id) { alert('განცხადება ვერ მოიძებნა'); return }
-  // draft_id შეიძლება ss_id იყოს — ჩვენს db-ში ვეძებთ
   create_home_ss(draft_id)
 }, 100)
 
