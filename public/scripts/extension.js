@@ -289,6 +289,12 @@ function validate_base_modal() {
     if (!modal_open) return
     if (event.target === modal) { destroy_base_modal(); modal_open = false }
   }
+  window.addEventListener('message', (event) => {
+    if (event.data?.type === 'CLOSE_BASE_MODAL') {
+      destroy_base_modal()
+      modal_open = false
+    }
+  })
 }
 
 function destroy_base_modal() {
@@ -358,6 +364,7 @@ setTimeout(async () => {
   if (url.includes('auto-pay')) AUTO_PAY_SS = true
   const draft_id = Number(match[1])
   if (!draft_id) { alert('განცხადება ვერ მოიძებნა'); return }
+  // draft_id შეიძლება ss_id იყოს — ჩვენს db-ში ვეძებთ
   create_home_ss(draft_id)
 }, 100)
 
