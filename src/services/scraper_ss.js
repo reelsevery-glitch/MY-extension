@@ -1,5 +1,16 @@
 const fetch = require('node-fetch');
 
+// 1. დავამატეთ STATE_MAP, რომ ტექსტური მნიშვნელობები გადავიყვანოთ რიცხვებში
+const STATE_MAP = {
+  'ახალი რემონტით': 1,
+  'ძველი რემონტით': 2,
+  'თეთრი კარკასი': 3,
+  'მწვანე კარკასი': 4,
+  'შავი კარკასი': 5,
+  'სარემონტო': 6,
+  'მიმდინარე რემონტი': 7
+};
+
 async function scrape_ss(url) {
   try {
     const response = await fetch(url, {
@@ -29,7 +40,16 @@ async function scrape_ss(url) {
     const desc = listing.description || {};
     const price = listing.price || {};
 
-    // ყველა რიცხვი parseInt/parseFloat - SS API-ს number სჭირდება
+    // მდგომარეობის (state) ლოგიკა: თუ ტექსტია - გადაგვყავს რიცხვში MAP-ის მიხედვით
+    let stateNum = listing.stateId || listing.state;
+    if (typeof stateNum === 'string' && STATE_MAP[stateNum]) {
+      stateNum = STATE_MAP[stateNum];
+    } else if (stateNum) {
+      stateNum = parseInt(stateNum);
+    }
+
+    const projectNum = listing.projectId || listing.project ? parseInt(listing.projectId || listing.project) : null;
+
     const template = {
       realEstateDealTypeId: listing.realEstateDealTypeId,
       realEstateTypeId: listing.realEstateTypeId,
@@ -38,33 +58,29 @@ async function scrape_ss(url) {
       subdistrictId: address.subdistrictId || null,
       streetId: address.streetId,
       streetNumber: address.streetNumber || '',
-      // ფართობი — string-იდან number-ად
       totalArea: listing.totalArea ? parseFloat(listing.totalArea) : null,
       areaOfHouse: listing.areaOfHouse ? parseFloat(listing.areaOfHouse) : null,
       kitchenArea: listing.kitchenArea ? parseFloat(listing.kitchenArea) : null,
-      // სართული — string-იდან number-ად
       floor: listing.floor ? parseInt(listing.floor) : null,
       totalFloors: listing.floors ? parseInt(listing.floors) : null,
-      // ოთახები
       rooms: listing.rooms ? parseInt(listing.rooms) : null,
       bedrooms: listing.bedrooms ? parseInt(listing.bedrooms) : null,
       toilet: listing.toilet ? parseInt(listing.toilet) : null,
       balcony_Loggia: listing.balcony_Loggia ? parseInt(listing.balcony_Loggia) : null,
-      // ფასი
       priceUsd: price.priceUsd || null,
       priceGeo: price.priceGeo || null,
       currencyType: price.currencyType || 2,
-      // აღწერა
       descriptionGe: desc.ka || desc.text || '',
       descriptionEn: desc.en || '',
       descriptionRu: desc.ru || '',
-      // სტატუსი და მდგომარეობა
       realEstateStatusId: listing.realEstateStatusId || null,
-      state: listing.state || null,
-      project: listing.project || null,
+      
+      // 2. კლოდის დავალება: state და project-ის სწორი ფორმატირება
+      state: stateNum !== null && !isNaN(stateNum) ? stateNum : undefined,
+      project: projectNum !== null && !isNaN(projectNum) ? projectNum : undefined,
+      
       floorType: listing.floorType || 0,
       commercialType: listing.commercialType || 0,
-      // კეთილმოწყობა (boolean)
       balcony: listing.balcony || false,
       elevator: listing.elevator || false,
       furniture: listing.furniture || false,
@@ -89,11 +105,9 @@ async function scrape_ss(url) {
       light: listing.light || false,
       viewOnYard: listing.viewOnYard || false,
       viewOnStreet: listing.viewOnStreet || false,
-      // კოორდინატები
       locationLatitude: listing.locationLatitude || null,
       locationLongitude: listing.locationLongitude || null,
       isManualPin: listing.isManualPin || false,
-      // ტელეფონი
       phoneNumbers: [{ phoneNumber: '' }],
     };
 
