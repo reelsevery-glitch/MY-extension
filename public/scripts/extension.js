@@ -59,7 +59,7 @@ async function check_auth_myhome() {
 
 async function verification_from_ss(loading) {
   const element = document.getElementById('__NEXT_DATA__')
-  if (!element) return // შემოწმება თუ ელემენტი არსებობს
+  if (!element) return
   const obj = JSON.parse(element.textContent)
   const session = obj.props.pageProps.session?.user
   if (!session) { alert('არ ხართ ავტორიზირებული ss.ge-ზე'); return }
@@ -129,11 +129,34 @@ async function api_refresh_token(token) {
 }
 
 //=========================================================================================> UI
-setInterval(async () => {
-  let currentUrl = document.URL
-  if (currentUrl.includes('https://home.ss.ge/')) await append_UI({ ss: true, myhome: false })
-  if (currentUrl.includes('https://www.myhome.ge/')) await append_UI({ ss: false, myhome: true })
-}, 500)
+
+// FIX: setInterval-ის ნაცვლად MutationObserver — არ იწვევს memory leak-ს
+// და UI-ს მხოლოდ მაშინ ამოწმებს, როდესაც DOM-ი იცვლება
+let _uiObserver = null
+let _lastUrl = ''
+
+function start_ui_observer() {
+  const currentUrl = document.URL
+  if (currentUrl.includes('https://home.ss.ge/')) append_UI({ ss: true, myhome: false })
+  if (currentUrl.includes('https://www.myhome.ge/')) append_UI({ ss: false, myhome: true })
+
+  if (_uiObserver) return
+  _uiObserver = new MutationObserver(() => {
+    const url = document.URL
+    if (url === _lastUrl) return
+    _lastUrl = url
+    if (url.includes('https://home.ss.ge/')) append_UI({ ss: true, myhome: false })
+    if (url.includes('https://www.myhome.ge/')) append_UI({ ss: false, myhome: true })
+  })
+  _uiObserver.observe(document.body, { childList: true, subtree: true })
+}
+
+// DOM მზად იყოს შემდეგ გავუშვათ
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', start_ui_observer)
+} else {
+  start_ui_observer()
+}
 
 function get_inner_container_HTML() {
   const item = document.createElement('div')
@@ -180,6 +203,7 @@ function get_loading_images_HTML() {
 }
 function get_modal_window_HTML() {
   const item = document.createElement("div")
+  // FIX: display:none დამატებული — index.html-თან თანმიმდევრული
   item.innerHTML = `<div id="base_modal" class="base-modal" style="display:none;"><div id="base_modalContent" class="base-modal-content"></div></div>`
   return item
 }
@@ -225,7 +249,7 @@ async function append_UI(config) {
     buttons_container.appendChild(btn)
     btn.addEventListener('click', find_draft_SS)
   }
-  
+
   if (config.myhome && !document.getElementById('save_btn_myhome')) {
     const btn = get_save_btn_HTML('save_btn_myhome', 'Myhome-ზე შენახვა', '💾')
     buttons_container.appendChild(btn)
@@ -290,9 +314,9 @@ function validate_base_modal() {
 
   window.onclick = (event) => {
     if (!modal_open) return
-    if (event.target === modal) { 
-        destroy_base_modal()
-        modal_open = false 
+    if (event.target === modal) {
+      destroy_base_modal()
+      modal_open = false
     }
   }
 }
@@ -301,24 +325,24 @@ function destroy_base_modal() {
   const modal = document.getElementById('base_modal')
   const iframe = document.getElementById('myestate_frame')
   const inner = document.getElementById("inner_container")
-  
+
   if (iframe) iframe.remove()
   if (modal) modal.style.display = "none"
   if (inner) inner.style.display = "block"
 }
 
 function insers_base_modal() {
-  const inner = document.getElementById("inner_container");
-  if (inner) inner.style.display = "none";
-  
+  const inner = document.getElementById("inner_container")
+  if (inner) inner.style.display = "none"
+
   const modal = document.getElementById('base_modal')
   modal.style.display = "block"
-  
+
   const modalContent = document.getElementById('base_modalContent')
   const token = get_token_from_local_storage()
-  
+
   if (!token) { alert('ავტორიზაცია საჭიროა!'); return }
-  
+
   modalContent.innerHTML = `
     <iframe id="myestate_frame" class="frame_custom" scrolling="yes"
       src="${FRONT_URL}?token=${token}"
