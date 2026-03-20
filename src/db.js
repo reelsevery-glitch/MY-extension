@@ -1,7 +1,10 @@
 const fs = require('fs');
 const path = require('path');
 
-const DB_PATH = path.join(__dirname, '../../data/db.json');
+// Railway Volume-ზე შენახვისთვის DB_PATH env variable გამოიყენება
+// Railway Variables-ში დაამატე: DB_PATH=/app/data/db.json
+// ლოკალურად .env-ში: DB_PATH=../../data/db.json (ან არაფერი — default-ი გამოიყენება)
+const DB_PATH = process.env.DB_PATH || path.join(__dirname, '../../data/db.json');
 
 const EMPTY_DB = {
   users: [],
@@ -27,6 +30,7 @@ function loadDB() {
     _cache = JSON.parse(fs.readFileSync(DB_PATH, 'utf8'));
     return _cache;
   } catch (e) {
+    console.error('DB load error:', e.message);
     _cache = JSON.parse(JSON.stringify(EMPTY_DB));
     return _cache;
   }
