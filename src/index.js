@@ -14,15 +14,21 @@ const imagesRoutes = require('./routes/images');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// CORS - Extension-ს სჭირდება
+// CORS - ყველა origin-ს უშვებს, მათ შორის Chrome Extension-ებს
 app.use(cors({
-  origin: '*',
-  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  origin: function(origin, callback) {
+    callback(null, true);
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'refreshtoken', 'refreshToken', 'Global-Authorization', 'X-Website-Key'],
   exposedHeaders: ['*'],
   preflightContinue: false,
   optionsSuccessStatus: 204
 }));
+
+// OPTIONS preflight — ყველა route-სთვის
+app.options('*', cors());
 
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
