@@ -15,22 +15,21 @@ setTimeout(async () => {
 
 async function check_auth_ss() {
   const token_local = get_token_from_local_storage()
-  let auth_data = null
-  if (token_local) auth_data = await api_refresh_token(token_local)
   if (!token_local) { return }
-  if (auth_data?.message) {
-    set_user_to_local_storage(null)
-    set_token_to_local_storage(null)
-    alert(auth_data.message)
+  let auth_data = null
+  try {
+    auth_data = await api_refresh_token(token_local)
+  } catch(e) {
+    console.warn("MyEstate: სერვერთან კავშირი ვერ მოხდა")
     return
   }
-  if (auth_data) {
-    set_user_to_local_storage(auth_data.user)
-    set_token_to_local_storage(auth_data.accessToken)
-    IS_AUTH = true
-  } else {
-    verification_from_ss(true)
+  if (!auth_data || auth_data.message) {
+    await verification_from_ss(true)
+    return
   }
+  set_user_to_local_storage(auth_data.user)
+  set_token_to_local_storage(auth_data.accessToken)
+  IS_AUTH = true
 }
 
 async function check_auth_myhome() {
@@ -69,12 +68,18 @@ async function verification_from_ss(loading) {
     ss_phone: Number(session.phone_number),
     ss_pin: session.PIN
   }
-  let res = await api_broker_login_pin(data)
-  if (res.message) res = await api_broker_registration(data)
-  if (res.message) {
-    set_user_to_local_storage(null)
-    set_token_to_local_storage(null)
-    alert(res.message)
+  let res
+  try {
+    res = await api_broker_login_pin(data)
+    if (res.message) res = await api_broker_registration(data)
+  } catch(e) {
+    // სერვერთან კავშირი ვერ მოხდა — extension-ი ჩართული რჩება, ჩუმად ვცდით
+    console.warn('MyEstate: სერვერთან კავშირი ვერ მოხდა, ხელახლა ვცდი...')
+    return
+  }
+  if (!res || res.message) {
+    // სერვერი პასუხობს მაგრამ შეცდომა აქვს — მხოლოდ console-ში ვწერთ, არ ვხვრეტთ UI-ს
+    console.warn('MyEstate auth error:', res?.message)
     return
   }
   set_user_to_local_storage(res.user)
