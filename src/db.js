@@ -10,24 +10,40 @@ const EMPTY_DB = {
   _next_id: { users: 1, drafts: 1, currency: 1 }
 };
 
+// ერთი in-memory ასლი — loadDB/saveDB-ის ყოველ ოპერაციაზე გამოძახების ნაცვლად
+let _cache = null;
+let _saveTimer = null;
+
 function loadDB() {
+  if (_cache) return _cache;
   try {
     const dir = path.dirname(DB_PATH);
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
     if (!fs.existsSync(DB_PATH)) {
       fs.writeFileSync(DB_PATH, JSON.stringify(EMPTY_DB, null, 2));
-      return JSON.parse(JSON.stringify(EMPTY_DB));
+      _cache = JSON.parse(JSON.stringify(EMPTY_DB));
+      return _cache;
     }
-    return JSON.parse(fs.readFileSync(DB_PATH, 'utf8'));
+    _cache = JSON.parse(fs.readFileSync(DB_PATH, 'utf8'));
+    return _cache;
   } catch (e) {
-    return JSON.parse(JSON.stringify(EMPTY_DB));
+    _cache = JSON.parse(JSON.stringify(EMPTY_DB));
+    return _cache;
   }
 }
 
-function saveDB(data) {
-  const dir = path.dirname(DB_PATH);
-  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-  fs.writeFileSync(DB_PATH, JSON.stringify(data, null, 2));
+// debounced write — ბევრი ოპერაციის დროს ერთხელ წერს
+function saveDB() {
+  if (_saveTimer) clearTimeout(_saveTimer);
+  _saveTimer = setTimeout(() => {
+    try {
+      const dir = path.dirname(DB_PATH);
+      if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+      fs.writeFileSync(DB_PATH, JSON.stringify(_cache, null, 2));
+    } catch (e) {
+      console.error('DB save error:', e.message);
+    }
+  }, 100);
 }
 
 const db = {
@@ -39,7 +55,7 @@ const db = {
       const id = data._next_id.users++;
       const newUser = { id, ...user, roles: JSON.stringify(user.roles || ['USER']), created_at: new Date().toISOString() };
       data.users.push(newUser);
-      saveDB(data);
+      saveDB();
       return newUser;
     },
     update: (id, fields) => {
@@ -47,7 +63,7 @@ const db = {
       const idx = data.users.findIndex(u => u.id === id);
       if (idx === -1) return null;
       data.users[idx] = { ...data.users[idx], ...fields };
-      saveDB(data);
+      saveDB();
       return data.users[idx];
     }
   },
@@ -61,7 +77,7 @@ const db = {
       const now = new Date().toISOString();
       const newDraft = { id, ...draft, created_at: now, updated_at: now };
       data.drafts.push(newDraft);
-      saveDB(data);
+      saveDB();
       return newDraft;
     },
     update: (id, user_id, fields) => {
@@ -69,13 +85,13 @@ const db = {
       const idx = data.drafts.findIndex(x => x.id === id && x.user_id === user_id);
       if (idx === -1) return null;
       data.drafts[idx] = { ...data.drafts[idx], ...fields, updated_at: new Date().toISOString() };
-      saveDB(data);
+      saveDB();
       return data.drafts[idx];
     },
     delete: (id, user_id) => {
       const data = loadDB();
       data.drafts = data.drafts.filter(x => !(x.id === id && x.user_id === user_id));
-      saveDB(data);
+      saveDB();
     }
   },
   currency: {
@@ -83,7 +99,7 @@ const db = {
       const data = loadDB();
       data.currency.push({ id: data._next_id.currency++, usd_gel, eur_gel, updated_at: new Date().toISOString() });
       if (data.currency.length > 100) data.currency = data.currency.slice(-100);
-      saveDB(data);
+      saveDB();
     }
   }
 };
